@@ -10,6 +10,7 @@ import models.DBManager;
 import models.Order;
 import models.OrderLine;
 import java.util.Map;
+import javax.swing.JOptionPane;
 import javax.swing.table.*;
 import models.Product;
 
@@ -22,6 +23,10 @@ public class ViewBasket extends javax.swing.JFrame {
     private Order currentOrder;
     Customer loggedInCustomer;
     
+    /**
+     *
+     * @param customer
+     */
     public ViewBasket(Customer customer) 
     {
         initComponents();
@@ -63,7 +68,7 @@ public class ViewBasket extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        btnBack.setText("Back");
+        btnBack.setText("Add More Products");
         btnBack.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnBackActionPerformed(evt);
@@ -81,6 +86,11 @@ public class ViewBasket extends javax.swing.JFrame {
         jScrollPane1.setViewportView(tblBasket);
 
         btnRemove.setText("Remove");
+        btnRemove.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnRemoveActionPerformed(evt);
+            }
+        });
 
         btnBuy.setText("Buy");
         btnBuy.addActionListener(new java.awt.event.ActionListener() {
@@ -139,15 +149,37 @@ public class ViewBasket extends javax.swing.JFrame {
 
     private void btnBuyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBuyActionPerformed
         
-        currentOrder.setStatus("Confirmed");
+        currentOrder.setStatus("Complete");
         
-        DBManager db = new DBManager();
-        db.completeOrder(currentOrder.getOrderId());
+        currentOrder.completeOrder(currentOrder);
         
         Confirmation confirmation = new Confirmation(loggedInCustomer, currentOrder);
         this.dispose();
         confirmation.setVisible(true);
     }//GEN-LAST:event_btnBuyActionPerformed
+
+    private void btnRemoveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRemoveActionPerformed
+        
+        int selectedRow = tblBasket.getSelectedRow();
+        
+        if(selectedRow == -1)
+        {
+            JOptionPane.showMessageDialog(null, "Select A Product");
+        }
+        else
+        {
+            int animalId = Integer.parseInt(String.valueOf(tblBasket.getValueAt(selectedRow, 0)));
+            currentOrder.removeOrderLine(animalId);
+            
+            JOptionPane.showMessageDialog(null, "Product Removed");
+            
+            DefaultTableModel basketModel = (DefaultTableModel)tblBasket.getModel();
+            basketModel.removeRow(selectedRow);
+            tblBasket.setModel(basketModel);
+            
+            lblOrderTotal.setText("£" + String.format("%.02f", currentOrder.getOrderTotal()));
+        }
+    }//GEN-LAST:event_btnRemoveActionPerformed
 
     /**
      * @param args the command line arguments

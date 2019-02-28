@@ -3,21 +3,33 @@ package models;
 import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
-
+/**
+ *
+ * @author Jamie
+ */
 public class DBManager 
 {
     // Private Constants
     private final String driver = "net.ucanaccess.jdbc.UcanaccessDriver";
     private final String connectionString = 
-              "jdbc:ucanaccess://Z:\\HND\\Object Oriented Programming\\OOP - Assessment (Up To Date)\\Assessment\\Assessment30237347\\Data\\ShopDB.accdb";
-//            "jdbc:ucanaccess://C:\\Users\\Jamie\\Desktop\\Assessment30237347\\Data\\ShopDB.accdb";
+//              "jdbc:ucanaccess://Z:\\HND\\Object Oriented Programming\\15-2-19\\Assessment\\Assessment30237347\\Data\\ShopDB.accdb";
+            "jdbc:ucanaccess://C:\\Users\\Jamie\\Desktop\\Assessment30237347\\Data\\ShopDB.accdb";
     
     
     // Public Functions
+
+    /**
+     *
+     * @return
+     */
     public HashMap<String, Staff> loadStaff()
     {
         // String as ZooKeepers email
@@ -58,7 +70,10 @@ public class DBManager
         }
     }
     
-    
+    /**
+     *
+     * @return
+     */
     public HashMap<String, Customer> loadCustomers()
     {
         // String as ZooKeepers email
@@ -98,11 +113,18 @@ public class DBManager
         }
         finally
         {
+            customers = loadCustomerOrders(customers);
+            customers = loadCustomerOrderLines(customers);
             return customers;
         }
     }
     
-    
+    /**
+     *
+     * @param username
+     * @param password
+     * @return
+     */
     public Staff staffLogin(String username, String password)
     {
         HashMap<String, Staff> staffMembers = loadStaff();
@@ -129,8 +151,13 @@ public class DBManager
         }
     }
     
-    
-     public Customer customerLogin(String username, String password)
+    /**
+     *
+     * @param username
+     * @param password
+     * @return
+     */
+    public Customer customerLogin(String username, String password)
     {
         HashMap<String, Customer> customers = loadCustomers();
         
@@ -156,7 +183,10 @@ public class DBManager
         }
     }
      
-    
+    /**
+     *
+     * @return
+     */
     public HashMap<Integer, Product> loadProducts()
     {
         // String as ZooKeepers email
@@ -172,7 +202,7 @@ public class DBManager
             {
                 // Store database values in ResultSet
                 int productId = rs.getInt("ProductId");
-                String productName = rs.getString("productName");
+                String productName = rs.getString("ProductName");
                 double price = rs.getDouble("Price");
                 int stockLevel = rs.getInt("StockLevel");
                 String measurement = rs.getString("Measurement");
@@ -204,7 +234,11 @@ public class DBManager
         }
     }
      
-    
+    /**
+     *
+     * @param c
+     * @return
+     */
     public boolean registerCustomer(Customer c)
     {
          try
@@ -227,7 +261,10 @@ public class DBManager
                        
     }
     
-    
+    /**
+     *
+     * @param product
+     */
     public void addProduct(Product product)
     {
             String measurement = "";
@@ -261,7 +298,10 @@ public class DBManager
             }
     }
     
-    
+    /**
+     *
+     * @param product
+     */
     public void editProduct(Product product)
     {
         String measurement = "";
@@ -296,7 +336,10 @@ public class DBManager
         }
     }
     
-    
+    /**
+     *
+     * @param c
+     */
     public void editCustomer(Customer c)
     {
          try
@@ -315,7 +358,10 @@ public class DBManager
          }
     }
     
-    
+    /**
+     *
+     * @param customer
+     */
     public void deleteCustomer(Customer customer)
     {
             try
@@ -332,7 +378,10 @@ public class DBManager
             }  
     }
     
-    
+    /**
+     *
+     * @param product
+     */
     public void deleteProduct(Product product)
     {
         try
@@ -349,7 +398,12 @@ public class DBManager
             }  
     }
     
-    
+    /**
+     *
+     * @param orderLine
+     * @param orderId
+     * @return
+     */
     public int addOrderLine(OrderLine orderLine, int orderId)
     {
         int orderLineId = 0;
@@ -380,7 +434,35 @@ public class DBManager
         return orderLineId;
     }
     
+    /**
+     *
+     * @param ol
+     */
+    public void editOrderLine(OrderLine ol)
+    {
+        try
+        {
+            Class.forName(driver);
+            Connection conn = DriverManager.getConnection(connectionString);
+            Statement stmt = conn.createStatement();
+            
+            stmt.executeUpdate("UPDATE OrderLines SET Quantity = '" + ol.getQuantity() + "', " +
+                    "LineTotal = '" + ol.getLineTotal() + "' WHERE OrderLineId = '" + ol.getOrderLineId() + "'");
+
+            conn.close();
+        }
+        catch(Exception ex)
+        {
+            ex.getMessage();
+        }
+    }
     
+    /**
+     *
+     * @param order
+     * @param staffUsername
+     * @return
+     */
     public int addOrder(Order order, String staffUsername)
     {
         int orderId = 0;
@@ -411,7 +493,11 @@ public class DBManager
         return orderId;
     }
     
-    
+    /**
+     *
+     * @param orderId
+     * @param newTotal
+     */
     public void updateOrderTotal(int orderId, double newTotal)
     {
         try
@@ -429,6 +515,10 @@ public class DBManager
         }        
     }
     
+    /**
+     *
+     * @param orderId
+     */
     public void completeOrder(int orderId)
     {
         try
@@ -445,5 +535,156 @@ public class DBManager
         }        
     }
     
+    /**
+     *
+     * @param customers
+     * @return
+     */
+    public HashMap<String, Customer> loadCustomerOrders(HashMap<String, Customer> customers)
+    {
+       try
+        {
+            Class.forName(driver);
+            Connection conn = DriverManager.getConnection(connectionString);
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT * FROM Orders");
+            
+            while(rs.next())
+            {
+                int orderId = rs.getInt("OrderId");
+                Date orderDate = rs.getDate("OrderDate");
+                String username = rs.getString("Username");
+                double orderTotal = rs.getDouble("OrderTotal");
+                String status = rs.getString("Status");
+                
+                Order loadOrder = new Order(orderId, orderDate, orderTotal, status);
+                
+                if(customers.containsKey(username))
+                {
+                    Customer cWithOrder = customers.get(username);
+                    cWithOrder.getOrders().put(orderId, loadOrder);
+                }
+            }
+            
+            conn.close();
+            
+        }
+        catch(ClassNotFoundException | SQLException ex)
+        {
+            ex.getMessage();
+        }
+        finally
+        {
+             return customers;
+        } 
+    }
     
+    /**
+     *
+     * @param customers
+     * @return
+     */
+    public HashMap<String, Customer> loadCustomerOrderLines(HashMap<String, Customer> customers)
+    {
+        try
+        {
+            Class.forName(driver);
+            Connection conn = DriverManager.getConnection(connectionString);
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT * FROM OrderLines");
+            
+            HashMap<Integer, Product> products = loadProducts();
+            
+            while(rs.next())
+            {
+                int orderLineId = rs.getInt("OrderLineId");
+                int productId = rs.getInt("ProductId");
+                int quantity = rs.getInt("Quantity");
+                double lineTotal = rs.getDouble("LineTotal");
+                int orderId = rs.getInt("OrderId");
+                
+                Product loadedProduct = new Product();
+                
+                if(products.containsKey(productId))
+                {
+                    loadedProduct = products.get(productId);
+                }
+
+                OrderLine loadOrderLine = new OrderLine(orderLineId, loadedProduct, quantity, lineTotal);
+                
+                for(Map.Entry<String, Customer> cEntry : customers.entrySet())
+                {
+                    Customer actualCustomer = cEntry.getValue();
+                    
+                    if(actualCustomer.getOrders().containsKey(orderId))
+                    {
+                        Order orderWithOrderLine = actualCustomer.getOrders().get(orderId);
+                        orderWithOrderLine.getOrderLines().put(orderLineId, loadOrderLine);
+                    }
+                }
+            }
+            
+            conn.close();
+        }
+        catch(ClassNotFoundException | SQLException ex)
+        {
+            ex.getMessage();
+        }
+        finally
+        {
+             return customers;
+        }
+    }
+    
+    /**
+     *
+     * @param orderLineId
+     */
+    public void deleteOrderLine(int orderLineId)
+    {
+        try
+        {
+            Class.forName(driver);
+            Connection conn = DriverManager.getConnection(connectionString);
+            
+            Statement stmt = conn.createStatement();
+            stmt.executeUpdate("DELETE FROM OrderLines WHERE OrderLineId = '" + orderLineId + "'");
+            conn.close();
+        }
+        catch(Exception ex)
+        {
+            ex.getMessage();
+        }
+    }
+    
+    /**
+     *
+     * @param productId
+     * @param quantity
+     */
+    public void updateProductAvailability(int productId, int quantity)
+    {
+        try
+        {
+            Class.forName(driver);
+            Connection conn = DriverManager.getConnection(connectionString);
+            
+            String query = "UPDATE Products SET StockLevel = StockLevel - ? WHERE ProductId = ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setInt(1, quantity);
+            stmt.setInt(2, productId);
+            
+            stmt.executeUpdate();
+            
+            conn.close();
+        }
+        catch(Exception ex)
+        {
+            ex.getMessage();
+        }
+    }
 }
+
+    
+
+
